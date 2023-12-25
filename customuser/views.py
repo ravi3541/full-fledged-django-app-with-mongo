@@ -15,6 +15,7 @@ from rest_framework.response import Response
 from django.contrib.auth.hashers import check_password
 
 from utilities import messages
+from .permissions import IsAuthenticated
 from .models import (
     create_user,
     get_user_by_id,
@@ -29,6 +30,7 @@ from .serializers import (
     UserLoginSerializer,
     UserProfileSerializer,
 )
+from .permissions import MongoDBAuthentication
 
 
 class SignupAPIView(CreateAPIView):
@@ -178,4 +180,23 @@ class GetUserProfileAPIView(RetrieveAPIView):
             self.response_format["error"] = "Token Error"
             self.response_format["status_code"] = status.HTTP_400_BAD_REQUEST
             self.response_format["message"] = [messages.TOKEN_EXPIRED]
+        return Response(self.response_format)
+
+
+class GetUser(RetrieveAPIView):
+    permission_classes = (IsAuthenticated,)
+    authentication_classes = (MongoDBAuthentication,)
+
+    def __init__(self, **kwargs):
+        """
+        Constructor function for formatting the web response to return.
+        """
+        self.response_format = ResponseInfo().response
+        super(GetUser, self).__init__(**kwargs)
+
+    def get(self, request, *args, **kwargs):
+        self.response_format["data"] = request.user
+        self.response_format["error"] = None
+        self.response_format["status_code"] = status.HTTP_200_OK
+        self.response_format["message"] = [messages.SUCCESS]
         return Response(self.response_format)

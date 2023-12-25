@@ -21,6 +21,20 @@ class ResponseInfo(object):
         }
 
 
+# class CustomPermissionException(APIException):
+#     status_code = status.HTTP_400_BAD_REQUEST
+#     default_detail = "You do not have permission to perform this action."
+#
+#     def __init__(self, detail=None):
+#         """
+#         Method to display custom exception message
+#         """
+#         if detail is not None:
+#             self.detail = detail
+#         else:
+#             self.detail = self.default_detail
+
+
 def custom_exception_handler(exc, context):
     # Call REST framework's default exception handler first,
     # to get the standard error response.

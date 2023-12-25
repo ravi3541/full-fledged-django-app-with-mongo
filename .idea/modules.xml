@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/.idea/django_with_mongo.iml" filepath="$PROJECT_DIR$/.idea/django_with_mongo.iml" />
+      <module fileurl="file://$PROJECT_DIR$/.idea/full-fledged-django-app-with-mongo.iml" filepath="$PROJECT_DIR$/.idea/full-fledged-django-app-with-mongo.iml" />
     </modules>
   </component>
 </project>

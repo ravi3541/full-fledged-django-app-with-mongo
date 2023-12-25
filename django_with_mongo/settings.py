@@ -11,7 +11,6 @@ https://docs.djangoproject.com/en/5.0/ref/settings/
 """
 import os
 from pathlib import Path
-from datetime import timedelta
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -43,7 +42,6 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
 
     'rest_framework',
-    'rest_framework_simplejwt',
 
     'customuser',
 ]
@@ -91,9 +89,9 @@ WSGI_APPLICATION = 'django_with_mongo.wsgi.application'
 
 # Rest Framework configuration
 REST_FRAMEWORK = {
-    'DEFAULT_AUTHENTICATION_CLASSES': ('rest_framework_simplejwt.authentication.JWTAuthentication',),
-    "DEFAULT_PERMISSION_CLASSES": ("rest_framework.permissions.IsAuthenticated",),
-    "EXCEPTION_HANDLER": "utilities.utils.custom_exception_handler",
+    # 'DEFAULT_AUTHENTICATION_CLASSES': ('customuser.permissions.MongoDBAuthentication',),
+    # 'DEFAULT_PERMISSION_CLASSES': ('customuser.permissions.IsAuthenticated',),
+    "EXCEPTION_HANDLER": 'utilities.utils.custom_exception_handler',
 }
 
 
