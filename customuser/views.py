@@ -101,7 +101,8 @@ class LoginAPIView(CreateAPIView):
                     "first_name": user["first_name"],
                     "last_name": user["last_name"],
                     "email_name": user["email"],
-                    "token": jwt_token
+                    "role": user["role"],
+                    "token": jwt_token,
 
                 }
                 self.response_format["status_code"] = status.HTTP_200_OK

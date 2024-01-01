@@ -2,9 +2,19 @@ import os
 import jwt
 import json
 from bson import json_util
+from datetime import datetime
 from datetime import timedelta
+from pymongo import MongoClient
+from pymongo.cursor import Cursor
+from rest_framework import status
 from django.utils import timezone
+from bson.objectid import ObjectId
+from rest_framework.exceptions import APIException
 from rest_framework.views import exception_handler
+
+
+client = MongoClient(os.getenv("CONNECTION_STRING"))
+database = client[os.getenv("DATABASE")]
 
 
 class ResponseInfo(object):
@@ -21,18 +31,18 @@ class ResponseInfo(object):
         }
 
 
-# class CustomPermissionException(APIException):
-#     status_code = status.HTTP_400_BAD_REQUEST
-#     default_detail = "You do not have permission to perform this action."
-#
-#     def __init__(self, detail=None):
-#         """
-#         Method to display custom exception message
-#         """
-#         if detail is not None:
-#             self.detail = detail
-#         else:
-#             self.detail = self.default_detail
+class CustomException(APIException):
+    status_code = status.HTTP_400_BAD_REQUEST
+    default_detail = "You do not have permission to perform this action."
+
+    def __init__(self, detail=None):
+        """
+        Method to display custom exception message
+        """
+        if detail is not None:
+            self.detail = detail
+        else:
+            self.detail = self.default_detail
 
 
 def custom_exception_handler(exc, context):
@@ -66,10 +76,31 @@ def custom_exception_handler(exc, context):
     return response
 
 
+def convert_object_ids_to_str(doc):
+    for key, value in doc.items():
+        if isinstance(value, ObjectId):
+            doc[key] = str(value)
+        elif isinstance(value, datetime):
+            doc[key] = value.isoformat()
+        elif isinstance(value, dict):
+            convert_object_ids_to_str(value)
+        elif isinstance(value, list):
+            for i, item in enumerate(value):
+                if isinstance(item, dict):
+                    convert_object_ids_to_str(item)
+
+
 def parse_json(data):
+    if isinstance(data, Cursor):
+        parsed_data_list = list()
+        for obj in data:
+            convert_object_ids_to_str(obj)
+            parsed_data = json.loads(json_util.dumps(obj))
+            parsed_data_list.append(parsed_data)
+        return parsed_data_list
+
+    convert_object_ids_to_str(data)
     parsed_data = json.loads(json_util.dumps(data))
-    parsed_data["id"] = parsed_data["_id"]["$oid"] if parsed_data["_id"]["$oid"] else None
-    parsed_data.pop("_id")
 
     return parsed_data
 
@@ -82,7 +113,7 @@ def get_tokens_for_user(user_obj):
 
     payload = {
         "id": user_obj["id"],
-        "exp": timezone.now() + timedelta(minutes=10),
+        "exp": timezone.now() + timedelta(days=7),
         "iat": timezone.now(),
         "token_type": "access"
     }
