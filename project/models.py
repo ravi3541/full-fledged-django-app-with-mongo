@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 
 from utilities.utils import database
 
-project_collection = database.project
+project_collection = database["project"]
 client_collection = database["client"]
 
 

@@ -1,4 +1,9 @@
+from bson.objectid import ObjectId
 from rest_framework import serializers
+
+
+from utilities import messages
+from .models import client_collection
 
 
 class ClientSerializer(serializers.Serializer):
@@ -20,5 +25,15 @@ class ProjectSerializer(serializers.Serializer):
     cost = serializers.FloatField(allow_null=False, required=True)
     client_id = serializers.CharField(max_length=50, allow_null=False, allow_blank=False, required=True)
     description = serializers.CharField(max_length=300, allow_null=False, allow_blank=False, required=True)
+
+    def validate_client_id(self, value):
+        """
+        Method to validate client_id.
+        """
+        client_exist = client_collection.find_one({"_id": ObjectId(value)})
+        if not client_exist:
+            raise serializers.ValidationError(messages.DOES_NOT_EXIST.format("Client"))
+        return value
+
 
 
