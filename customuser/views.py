@@ -8,6 +8,7 @@ from jwt import (
 from bson import json_util
 from rest_framework import status
 from rest_framework.generics import (
+    ListAPIView,
     CreateAPIView,
     RetrieveAPIView
 )
@@ -16,11 +17,7 @@ from django.contrib.auth.hashers import check_password
 
 from utilities import messages
 from .permissions import IsAuthenticated
-from .models import (
-    create_user,
-    get_user_by_id,
-    get_user_by_email,
-)
+from .models import CustomUser
 from utilities.utils import (
     parse_json,
     ResponseInfo,
@@ -55,7 +52,7 @@ class SignupAPIView(CreateAPIView):
         user_serializer = self.get_serializer(data=request.data)
         if user_serializer.is_valid(raise_exception=True):
             user_data = user_serializer.validated_data
-            user_id = create_user(user_data)
+            user_id = CustomUser().create_user(user_data)
             if user_id:
                 self.response_format["status_code"] = status.HTTP_201_CREATED
                 self.response_format["data"] = {"id": json.loads(json_util.dumps(user_id))["$oid"]}
@@ -91,7 +88,7 @@ class LoginAPIView(CreateAPIView):
         """
         serializer = self.get_serializer(data=request.data)
         if serializer.is_valid(raise_exception=True):
-            user = get_user_by_email(serializer.validated_data['username'])
+            user = CustomUser().get_user_by_email(serializer.validated_data['username'])
             if user and check_password(serializer.validated_data['password'], user['password']):
                 user = parse_json(user)
 
@@ -147,7 +144,7 @@ class GetUserProfileAPIView(RetrieveAPIView):
                     user_id = jwt.decode(old_token, os.getenv("JWT_PUBLIC_KEY"), algorithms=["RS256"])
                     if user_id:
                         if user_id["token_type"] == "access":
-                            user_obj = get_user_by_id(user_id["id"])
+                            user_obj = CustomUser().get_user_by_id(user_id["id"])
                             user_obj.pop("password")
 
                             user = parse_json(user_obj)
@@ -199,5 +196,29 @@ class GetUser(RetrieveAPIView):
         self.response_format["data"] = request.user
         self.response_format["error"] = None
         self.response_format["status_code"] = status.HTTP_200_OK
+        self.response_format["message"] = [messages.SUCCESS]
+        return Response(self.response_format)
+
+
+class ListResourceAPIView(ListAPIView):
+    permission_classes = (IsAuthenticated,)
+    authentication_classes = (MongoDBAuthentication,)
+
+    def __init__(self, **kwargs):
+        """
+        Constructor function for formatting the web response to return.
+        """
+        self.response_format = ResponseInfo().response
+        super(ListResourceAPIView, self).__init__(**kwargs)
+
+    def get(self, request, *args, **kwargs):
+        """
+        Method to get list of resources.
+        """
+        resources = CustomUser().get_all_users()
+
+        self.response_format["status_code"] = status.HTTP_200_OK
+        self.response_format["data"] = parse_json(resources)
+        self.response_format["error"] = None
         self.response_format["message"] = [messages.SUCCESS]
         return Response(self.response_format)

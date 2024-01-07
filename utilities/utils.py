@@ -6,6 +6,7 @@ from datetime import datetime
 from datetime import timedelta
 from pymongo import MongoClient
 from pymongo.cursor import Cursor
+from pymongo.command_cursor import CommandCursor
 from rest_framework import status
 from django.utils import timezone
 from bson.objectid import ObjectId
@@ -77,6 +78,7 @@ def custom_exception_handler(exc, context):
 
 
 def convert_object_ids_to_str(doc):
+    print("doc = ",doc)
     for key, value in doc.items():
         if isinstance(value, ObjectId):
             doc[key] = str(value)
@@ -91,13 +93,21 @@ def convert_object_ids_to_str(doc):
 
 
 def parse_json(data):
-    if isinstance(data, Cursor):
+    if isinstance(data, Cursor) | isinstance(data, CommandCursor):
         parsed_data_list = list()
         for obj in data:
+            print("obj = ", obj)
             convert_object_ids_to_str(obj)
             parsed_data = json.loads(json_util.dumps(obj))
             parsed_data_list.append(parsed_data)
-        return parsed_data_list
+    else:
+        # parsed_data_list = list()
+        convert_object_ids_to_str(data)
+        parsed_data = json.loads(json_util.dumps(data))
+        # parsed_data_list.append(parsed_data)
+        return parsed_data
+
+    return parsed_data_list
 
     convert_object_ids_to_str(data)
     parsed_data = json.loads(json_util.dumps(data))
@@ -112,7 +122,7 @@ def get_tokens_for_user(user_obj):
     user_obj.pop("password")
 
     payload = {
-        "id": user_obj["id"],
+        "id": user_obj["_id"],
         "exp": timezone.now() + timedelta(days=7),
         "iat": timezone.now(),
         "token_type": "access"

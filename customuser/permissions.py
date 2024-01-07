@@ -10,7 +10,7 @@ from rest_framework.exceptions import AuthenticationFailed
 from rest_framework.authentication import BaseAuthentication
 
 from utilities.utils import parse_json
-from customuser.models import get_user_by_id
+from customuser.models import CustomUser
 
 
 class MongoDBAuthentication(BaseAuthentication):
@@ -22,7 +22,7 @@ class MongoDBAuthentication(BaseAuthentication):
         try:
             user_id = jwt.decode(token, os.getenv("JWT_PUBLIC_KEY"), algorithms=["RS256"])
             if user_id and user_id["token_type"] == "access":
-                user_obj = get_user_by_id(user_id["id"])
+                user_obj = CustomUser().get_user_by_id(user_id["id"])
                 user_obj.pop("password")
 
                 return user_obj
