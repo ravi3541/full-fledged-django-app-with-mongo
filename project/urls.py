@@ -9,6 +9,8 @@ from .views import (
     DeleteClientAPIView,
     CreateProjectAPIView,
     GetAllProjectAPIView,
+    UpdateProjectAPIView,
+    DeleteProjectAPIView,
 )
 
 
@@ -22,7 +24,10 @@ urlpatterns = [
 
     path("createProject", CreateProjectAPIView.as_view(), name="create-project"),
     path("getProjectDetails/<str:pk>/", GetProjectAPIView.as_view(), name="get-project-details"),
-    path("getAllProjects", GetAllProjectAPIView.as_view(), name="get-all-project")
+    path("getAllProjects", GetAllProjectAPIView.as_view(), name="get-all-project"),
+    path("updateProject/<str:pk>/", UpdateProjectAPIView.as_view(), name="update-project"),
+    path("deleteProject/<str:pk>/", DeleteProjectAPIView.as_view(), name="delete-project"),
+
 
 ]
 

@@ -384,4 +384,103 @@ class GetAllProjectAPIView(RetrieveAPIView):
         return Response(self.response_format)
 
 
+class UpdateProjectAPIView(UpdateAPIView):
+    """
+    Class to create API for updating project.
+    """
+    permission_classes = (IsAuthenticated,)
+    authentication_classes = (MongoDBAuthentication,)
+    serializer_class = ProjectSerializer
 
+    def __init__(self, **kwargs):
+        """
+        Constructor function for formatting the web response to return.
+        """
+        self.response_format = ResponseInfo().response
+        super(UpdateProjectAPIView, self).__init__(**kwargs)
+
+    def patch(self, request, *args, **kwargs):
+        """
+        Method to update project.
+        """
+        project_id = self.kwargs["pk"]
+        try:
+            project_serializer = self.get_serializer(data=request.data)
+            if project_serializer.is_valid(raise_exception=True):
+
+                filter_condition = {"_id": ObjectId(project_id)}
+                update_fields = {
+                    "$set": {
+                        "name": project_serializer.validated_data["name"],
+                        "cost": project_serializer.validated_data["cost"],
+                        "client_id": project_serializer.validated_data["client_id"],
+                        "description": project_serializer.validated_data["description"],
+                        "updated_at": datetime.now(timezone.utc),
+                    }
+                }
+
+                result = project_collection.update_one(filter_condition, update_fields)
+                if result.matched_count == 0:
+                    self.response_format["status_code"] = status.HTTP_400_BAD_REQUEST
+                    self.response_format["data"] = None
+                    self.response_format["error"] = "Client"
+                    self.response_format["message"] = [messages.DOES_NOT_EXIST.format("Project")]
+
+                elif result.matched_count == result.modified_count:
+                    self.response_format["status_code"] = status.HTTP_200_OK
+                    self.response_format["data"] = None
+                    self.response_format["error"] = None
+                    self.response_format["message"] = [messages.UPDATED.format("Project")]
+
+                else:
+                    self.response_format["status_code"] = status.HTTP_500_INTERNAL_SERVER_ERROR
+                    self.response_format["data"] = None
+                    self.response_format["error"] = "Unexpected error"
+                    self.response_format["message"] = [messages.UNEXPECTED_ERROR]
+        except InvalidId:
+            self.response_format["status_code"] = status.HTTP_400_BAD_REQUEST
+            self.response_format["data"] = None
+            self.response_format["error"] = "Project"
+            self.response_format["message"] = [messages.INVALID_ID.format("Project")]
+        return Response(self.response_format)
+
+
+class DeleteProjectAPIView(DestroyAPIView):
+    """
+    Class to create API to delete project.
+    """
+    permission_classes = (IsAuthenticated,)
+    authentication_classes = (MongoDBAuthentication,)
+
+    def __init__(self, **kwargs):
+        """
+        Constructor function for formatting the web response to return.
+        """
+        self.response_format = ResponseInfo().response
+        super(DeleteProjectAPIView, self).__init__(**kwargs)
+
+    def delete(self, request, *args, **kwargs):
+        """
+        Method to delete project.
+        """
+        try:
+            project_id = self.kwargs["pk"]
+
+            client = project_collection.delete_one({"_id": ObjectId(project_id)})
+            if client.deleted_count > 0:
+                self.response_format["status_code"] = status.HTTP_204_NO_CONTENT
+                self.response_format["data"] = None
+                self.response_format["error"] = None
+                self.response_format["message"] = [messages.DELETED.format("Project")]
+            else:
+                self.response_format["status_code"] = status.HTTP_400_BAD_REQUEST
+                self.response_format["data"] = None
+                self.response_format["error"] = "Project"
+                self.response_format["message"] = [messages.DOES_NOT_EXIST.format("Project")]
+        except InvalidId:
+            self.response_format["status_code"] = status.HTTP_400_BAD_REQUEST
+            self.response_format["data"] = None
+            self.response_format["error"] = "Project"
+            self.response_format["message"] = [messages.INVALID_ID.format("Project")]
+
+        return Response(self.response_format)
