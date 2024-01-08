@@ -10,7 +10,10 @@ from rest_framework.exceptions import AuthenticationFailed
 from rest_framework.authentication import BaseAuthentication
 
 from utilities.utils import parse_json
-from customuser.models import CustomUser
+from customuser.models import (
+    CustomUser,
+    black_list_collection
+)
 
 
 class MongoDBAuthentication(BaseAuthentication):
@@ -20,6 +23,12 @@ class MongoDBAuthentication(BaseAuthentication):
 
     def authenticate_user(self, token):
         try:
+            black_list_collection.find(
+                {"token": token}
+            )
+            if black_list_collection is not None:
+                raise ExpiredSignatureError
+
             user_id = jwt.decode(token, os.getenv("JWT_PUBLIC_KEY"), algorithms=["RS256"])
             if user_id and user_id["token_type"] == "access":
                 user_obj = CustomUser().get_user_by_id(user_id["id"])
@@ -45,6 +54,7 @@ class MongoDBAuthentication(BaseAuthentication):
         if auth_header:
             key, token = auth_header.split(' ')
 
+
             if key == 'Bearer':
                 user_data = self.authenticate_user(token)
                 if user_data:
@@ -67,3 +77,21 @@ class IsAuthenticated(BasePermission):
 
     def has_permission(self, request, view):
         return bool(request.user and request.user["is_authenticated"])
+
+
+class IsManager(BasePermission):
+    """
+    Allows access only to PM.
+    """
+
+    def has_permission(self, request, view):
+        return bool(request.user and request.user["role"] == "PM")
+
+
+class IsAdmin(BasePermission):
+    """
+    Allows access only to admin.
+    """
+
+    def has_permission(self, request, view):
+        return bool(request.user and request.user["role"] == "ADMIN")

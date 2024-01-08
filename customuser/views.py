@@ -1,10 +1,4 @@
-import os
 import json
-import jwt
-from jwt import (
-    InvalidSignatureError,
-    ExpiredSignatureError
-)
 from bson import json_util
 from rest_framework import status
 from rest_framework.generics import (
@@ -12,12 +6,22 @@ from rest_framework.generics import (
     CreateAPIView,
     RetrieveAPIView
 )
+from datetime import (
+    datetime,
+    timezone
+)
 from rest_framework.response import Response
 from django.contrib.auth.hashers import check_password
 
 from utilities import messages
-from .permissions import IsAuthenticated
-from .models import CustomUser
+from .permissions import (
+    IsAdmin,
+    IsAuthenticated
+)
+from .models import (
+    CustomUser,
+    black_list_collection
+)
 from utilities.utils import (
     parse_json,
     ResponseInfo,
@@ -116,69 +120,40 @@ class LoginAPIView(CreateAPIView):
         return Response(self.response_format)
 
 
-class GetUserProfileAPIView(RetrieveAPIView):
+class LogoutAPIView(CreateAPIView):
     """
-    Class to create API for getting logged in users profile data.
-    """
-    permission_classes = ()
-    authentication_classes = ()
-    serializer_class = UserLoginSerializer
+        Class for creating API view for user logout.
+        """
+    permission_classes = (IsAuthenticated,)
+    authentication_classes = (MongoDBAuthentication,)
 
     def __init__(self, **kwargs):
         """
-        Constructor function for formatting the web response to return.
+         Constructor function for formatting the web response to return.
         """
         self.response_format = ResponseInfo().response
-        super(GetUserProfileAPIView, self).__init__(**kwargs)
+        super(LogoutAPIView, self).__init__(**kwargs)
 
-    def get(self, request, *args, **kwargs):
+    def post(self, request, *args, **kwargs):
         """
-        Method to get logged user profile.
+        POST Method for logging out the user and blacklisting the access token used.
         """
-        try:
-            auth_header = request.META.get('HTTP_AUTHORIZATION')
-            if auth_header:
-                key, old_token = auth_header.split(' ')
+        auth_header = request.META.get('HTTP_AUTHORIZATION')
+        if auth_header:
+            key, access_token = auth_header.split(' ')
+            refresh_token = request.data.get("refresh")
 
-                if key == 'Bearer':
-                    user_id = jwt.decode(old_token, os.getenv("JWT_PUBLIC_KEY"), algorithms=["RS256"])
-                    if user_id:
-                        if user_id["token_type"] == "access":
-                            user_obj = CustomUser().get_user_by_id(user_id["id"])
-                            user_obj.pop("password")
-
-                            user = parse_json(user_obj)
-                            self.response_format["data"] = user
-                            self.response_format["error"] = None
-                            self.response_format["status_code"] = status.HTTP_200_OK
-                            self.response_format["message"] = [messages.SUCCESS]
-                        else:
-                            self.response_format["data"] = None
-                            self.response_format["error"] = "Token type"
-                            self.response_format["status_code"] = status.HTTP_400_BAD_REQUEST
-                            self.response_format["message"] = [messages.INVALID_TOKEN_TYPE]
-
-                    else:
-                        self.response_format["data"] = None
-                        self.response_format["error"] = "User Error"
-                        self.response_format["status_code"] = status.HTTP_400_BAD_REQUEST
-                        self.response_format["message"] = [messages.JWT_DECODE_ERROR]
-            else:
-                self.response_format["data"] = None
-                self.response_format["error"] = "Bearer Error"
-                self.response_format["status_code"] = status.HTTP_400_BAD_REQUEST
-                self.response_format["message"] = [messages.TOKEN_NOT_FOUND]
-        except InvalidSignatureError:
+            black_list_collection.insert_many(
+                [{"token": access_token, "timestamp": datetime.now(timezone.utc)},
+                {"token": refresh_token, "timestamp": datetime.now(timezone.utc)}]
+            )
+            self.response_format["status_code"] = status.HTTP_200_OK
             self.response_format["data"] = None
-            self.response_format["error"] = "Token Error"
-            self.response_format["status_code"] = status.HTTP_400_BAD_REQUEST
-            self.response_format["message"] = [messages.INVALID_TOKEN]
-        except ExpiredSignatureError:
-            self.response_format["data"] = None
-            self.response_format["error"] = "Token Error"
-            self.response_format["status_code"] = status.HTTP_400_BAD_REQUEST
-            self.response_format["message"] = [messages.TOKEN_EXPIRED]
+            self.response_format["error"] = None
+            self.response_format["message"] = [messages.LOGOUT_SUCCESS]
         return Response(self.response_format)
+
+
 
 
 class GetUser(RetrieveAPIView):
@@ -201,8 +176,8 @@ class GetUser(RetrieveAPIView):
 
 
 class ListResourceAPIView(ListAPIView):
-    permission_classes = (IsAuthenticated,)
     authentication_classes = (MongoDBAuthentication,)
+    permission_classes = (IsAuthenticated, IsAdmin)
 
     def __init__(self, **kwargs):
         """

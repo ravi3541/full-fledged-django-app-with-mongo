@@ -11,13 +11,13 @@ from utilities.utils import CustomException
 client = MongoClient(os.getenv("CONNECTION_STRING"))
 database = client[os.getenv("DATABASE")]
 customuser_collection = database.customuser
+black_list_collection = database["black_list"]
 
 
 class CustomUser:
 
     def create_user(self, user_data):
         try:
-            # customuser_collection.create_index([('first_name', 1)], unique=True)
             customuser_collection.create_index([('email', 1)], unique=True)
 
             user_data['password'] = make_password(user_data['password'])
@@ -26,12 +26,6 @@ class CustomUser:
             result = customuser_collection.insert_one(user_data)
             return result.inserted_id
         except DuplicateKeyError as e:
-            # duplicate_key = e.details.get("keyPattern", {}).keys()
-            # print("key = ", duplicate_key)
-            # if "email" in duplicate_key:
-            #     print("Error - User with this email already exists.")
-            # if "first_name" in duplicate_key:
-            #     print("Error - User with this first_name already exists.")
 
             raise CustomException("User already exists.")
 

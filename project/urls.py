@@ -29,6 +29,8 @@ urlpatterns = [
     path("deleteProject/<str:pk>/", DeleteProjectAPIView.as_view(), name="delete-project"),
 
 
+
+
 ]
 
 

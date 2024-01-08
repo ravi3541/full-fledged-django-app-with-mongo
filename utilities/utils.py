@@ -78,7 +78,6 @@ def custom_exception_handler(exc, context):
 
 
 def convert_object_ids_to_str(doc):
-    print("doc = ",doc)
     for key, value in doc.items():
         if isinstance(value, ObjectId):
             doc[key] = str(value)
@@ -96,7 +95,6 @@ def parse_json(data):
     if isinstance(data, Cursor) | isinstance(data, CommandCursor):
         parsed_data_list = list()
         for obj in data:
-            print("obj = ", obj)
             convert_object_ids_to_str(obj)
             parsed_data = json.loads(json_util.dumps(obj))
             parsed_data_list.append(parsed_data)

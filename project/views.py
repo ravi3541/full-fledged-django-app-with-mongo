@@ -13,7 +13,6 @@ from rest_framework.generics import (
 from rest_framework.response import Response
 
 from utilities import messages
-from customuser.permissions import IsAuthenticated
 from .models import (
     Client,
     Project,
@@ -29,14 +28,19 @@ from .serializers import (
     ClientSerializer,
     ProjectSerializer,
 )
-from customuser.permissions import MongoDBAuthentication
+from customuser.permissions import (
+    IsAdmin,
+    IsManager,
+    IsAuthenticated,
+    MongoDBAuthentication,
+    )
 
 
 class CreateClientAPIView(CreateAPIView):
     """
     Class to create client.
     """
-    permission_classes = (IsAuthenticated,)
+    permission_classes = (IsAuthenticated, IsAdmin)
     authentication_classes = (MongoDBAuthentication,)
     serializer_class = ClientSerializer
 
@@ -70,7 +74,7 @@ class GetClientAPIView(RetrieveAPIView):
     """
     Class to create client.
     """
-    permission_classes = (IsAuthenticated,)
+    permission_classes = (IsAuthenticated, (IsManager | IsAdmin))
     authentication_classes = (MongoDBAuthentication,)
 
     def __init__(self, **kwargs):
@@ -85,13 +89,24 @@ class GetClientAPIView(RetrieveAPIView):
         Post method to create client.
         """
         client_id = self.kwargs.get("pk")
-        if client_id:
+        try:
             client = Client().get_client_by_id(client_id)
+            if client:
 
-            self.response_format["status_code"] = status.HTTP_201_CREATED
-            self.response_format["data"] = parse_json(client)
-            self.response_format["error"] = None
-            self.response_format["message"] = [messages.CREATED.format("Client")]
+                self.response_format["status_code"] = status.HTTP_201_CREATED
+                self.response_format["data"] = parse_json(client)
+                self.response_format["error"] = None
+                self.response_format["message"] = [messages.CREATED.format("Client")]
+            else:
+                self.response_format["status_code"] = status.HTTP_400_BAD_REQUEST
+                self.response_format["data"] = None
+                self.response_format["error"] = "Client"
+                self.response_format["message"] = [messages.DOES_NOT_EXIST.format("Client")]
+        except InvalidId:
+            self.response_format["status_code"] = status.HTTP_400_BAD_REQUEST
+            self.response_format["data"] = None
+            self.response_format["error"] = "Client"
+            self.response_format["message"] = [messages.INVALID_ID.format("Client")]
         return Response(self.response_format)
 
 
@@ -99,8 +114,8 @@ class GetAllClientAPIView(RetrieveAPIView):
     """
     Class to create client.
     """
-    permission_classes = (IsAuthenticated,)
     authentication_classes = (MongoDBAuthentication,)
+    permission_classes = (IsAuthenticated, (IsManager | IsAdmin))
 
     def __init__(self, **kwargs):
         """
@@ -127,8 +142,8 @@ class UpdateClientAPIView(UpdateAPIView):
     """
     Class to create API for updating client.
     """
-    permission_classes = (IsAuthenticated,)
     authentication_classes = (MongoDBAuthentication,)
+    permission_classes = (IsAuthenticated, IsAdmin)
     serializer_class = ClientSerializer
 
     def __init__(self, **kwargs):
@@ -181,12 +196,13 @@ class UpdateClientAPIView(UpdateAPIView):
 
         return Response(self.response_format)
 
+
 class DeleteClientAPIView(DestroyAPIView):
     """
     Class to create API to delete client.
     """
-    permission_classes = (IsAuthenticated,)
     authentication_classes = (MongoDBAuthentication,)
+    permission_classes = (IsAuthenticated, IsAdmin)
 
     def __init__(self, **kwargs):
         """
@@ -236,8 +252,8 @@ class CreateProjectAPIView(CreateAPIView):
     """
     Class to create Project.
     """
-    permission_classes = (IsAuthenticated,)
     authentication_classes = (MongoDBAuthentication,)
+    permission_classes = (IsAuthenticated, IsAdmin)
     serializer_class = ProjectSerializer
 
     def __init__(self, **kwargs):
@@ -271,6 +287,8 @@ class GetProjectAPIView(RetrieveAPIView):
     """
     Class to create API to get project.
     """
+    authentication_classes = (MongoDBAuthentication, )
+    permission_classes = (IsAuthenticated, (IsManager | IsAdmin))
 
     def __init__(self, **kwargs):
         """
@@ -316,13 +334,23 @@ class GetProjectAPIView(RetrieveAPIView):
         Method to get Project details.
         """
         project_id = self.kwargs["pk"]
-        project = self.get_project(project_id)
-
-        self.response_format["status_code"] = status.HTTP_200_OK
-        self.response_format["data"] = parse_json(project)
-        self.response_format["error"] = None
-        self.response_format["message"] = [messages.SUCCESS]
-
+        try:
+            project = self.get_project(project_id)
+            if project:
+                self.response_format["status_code"] = status.HTTP_200_OK
+                self.response_format["data"] = parse_json(project)
+                self.response_format["error"] = None
+                self.response_format["message"] = [messages.SUCCESS]
+            else:
+                self.response_format["status_code"] = status.HTTP_400_BAD_REQUEST
+                self.response_format["data"] = None
+                self.response_format["error"] = "Client"
+                self.response_format["message"] = [messages.DOES_NOT_EXIST.format("Client")]
+        except InvalidId:
+            self.response_format["status_code"] = status.HTTP_400_BAD_REQUEST
+            self.response_format["data"] = None
+            self.response_format["error"] = "Client"
+            self.response_format["message"] = [messages.INVALID_ID.format("Client")]
         return Response(self.response_format)
 
 
@@ -331,7 +359,7 @@ class GetAllProjectAPIView(RetrieveAPIView):
     Class to create API to get project.
     """
     authentication_classes = (MongoDBAuthentication,)
-    permission_classes = (IsAuthenticated,)
+    permission_classes = (IsAuthenticated, (IsAdmin | IsManager))
 
     def __init__(self, **kwargs):
         """
@@ -388,8 +416,8 @@ class UpdateProjectAPIView(UpdateAPIView):
     """
     Class to create API for updating project.
     """
-    permission_classes = (IsAuthenticated,)
     authentication_classes = (MongoDBAuthentication,)
+    permission_classes = (IsAuthenticated, (IsManager | IsAdmin))
     serializer_class = ProjectSerializer
 
     def __init__(self, **kwargs):
@@ -449,8 +477,8 @@ class DeleteProjectAPIView(DestroyAPIView):
     """
     Class to create API to delete project.
     """
-    permission_classes = (IsAuthenticated,)
     authentication_classes = (MongoDBAuthentication,)
+    permission_classes = (IsAuthenticated, IsAdmin)
 
     def __init__(self, **kwargs):
         """
